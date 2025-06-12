@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MyChat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet" />
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+  <!-- Join Room Form -->
+  <main class="flex flex-1 items-center justify-center">
+    <div class="w-full max-w-lg p-6 bg-white rounded-lg shadow-md">
+      <h2 class="text-xl font-semibold text-center text-gray-700 mb-4">Join a Chat Room</h2>
+      <form id="chatForm" class="space-y-4">
+        <input id="username" type="text" placeholder="Your Name" required class="w-full border rounded p-2" />
+        <input id="room" type="text" placeholder="Room Name" required class="w-full border rounded p-2" />
+        <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Join Chat</button>
+      </form>
+    </div>
+  </main>
+
+  <!-- Chat Section -->
+  <section id="chatSection" class="hidden flex flex-col flex-1 max-w-3xl mx-auto p-4 bg-white rounded shadow-md mt-5">
+    <div class="flex justify-between mb-4">
+      <div><strong>Room:</strong> <span id="roomNameDisplay"></span></div>
+      <div><strong>User:</strong> <span id="userNameDisplay"></span></div>
+    </div>
+    <div id="messages" class="flex-1 overflow-y-auto bg-gray-50 p-4 rounded border h-80"></div>
+    <form id="messageForm" class="flex mt-4">
+      <input id="messageInput" type="text" placeholder="Type a message" class="flex-1 border rounded p-2" />
+      <button type="submit" class="ml-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </form>
+  </section>
+
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyCO-ap6nE-2WeqDrEDF2KcmOeaLcIPRF7Q",
+      authDomain: "mychat-37449.firebaseapp.com",
+      databaseURL: "https://mychat-37449-default-rtdb.firebaseio.com",
+      projectId: "mychat-37449",
+      storageBucket: "mychat-37449.appspot.com",
+      messagingSenderId: "342150648479",
+      appId: "1:342150648479:web:7710831a55806ad9a888aa",
+      measurementId: "G-485WB5JSVQ"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const chatForm = document.getElementById("chatForm");
+    const chatSection = document.getElementById("chatSection");
+    const roomNameDisplay = document.getElementById("roomNameDisplay");
+    const userNameDisplay = document.getElementById("userNameDisplay");
+    const messagesDiv = document.getElementById("messages");
+    const messageForm = document.getElementById("messageForm");
+    const messageInput = document.getElementById("messageInput");
+
+    let username = "";
+    let room = "";
+
+    chatForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      username = document.getElementById("username").value.trim();
+      room = document.getElementById("room").value.trim();
+      if (!username || !room) return;
+
+      chatForm.style.display = "none";
+      chatSection.classList.remove("hidden");
+      roomNameDisplay.textContent = room;
+      userNameDisplay.textContent = username;
+
+      listenForMessages();
+    });
+
+    messageForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      db.ref(`rooms/${room}`).push({
+        sender: username,
+        text,
+        time: Date.now(),
+      });
+      messageInput.value = "";
+    });
+
+    function listenForMessages() {
+      db.ref(`rooms/${room}`).off(); // clear old listeners
+      db.ref(`rooms/${room}`).on("child_added", (snapshot) => {
+        const msg = snapshot.val();
+        const time = new Date(msg.time).toLocaleTimeString();
+        const isMine = msg.sender === username;
+
+        const msgEl = document.createElement("div");
+        msgEl.className = `mb-2 text-sm p-2 rounded ${isMine ? 'bg-blue-100 text-right' : 'bg-gray-200 text-left'}`;
+        msgEl.innerHTML = `<strong>${msg.sender}</strong>: ${msg.text}<div class="text-xs text-gray-500">${time}</div>`;
+        messagesDiv.appendChild(msgEl);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>
